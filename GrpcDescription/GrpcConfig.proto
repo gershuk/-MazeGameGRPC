@@ -1,0 +1,382 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "MazeGame.GrpcService";
+
+package MazeGame;
+
+service GrpcGameService 
+{
+  rpc RegisterNewUser (UserData) returns (RegistrationAnswer) {}
+  rpc LogIn(AuthorizationData) returns (AuthorizationAnswer) {}
+  rpc CreateRoom (OwnerRoomConfiguration) returns (RoomTableModificationAnswer) {}
+  rpc ChangeRoomProperties (OwnerRoomConfiguration) returns (RoomTableModificationAnswer) {}
+  rpc GetMaps (Empty) returns (GetMapsAnswer) {}
+  rpc GetBots (Empty) returns (GetBotsAnswer) {}
+  rpc DeleteRoom (PlayerAndRoomGuids) returns (DeleteRoomAnswer) {}
+  rpc KickPlayer (KickMessage) returns (PlayerKickAnswer) {}
+  rpc ConnectToRoom (PlayerAndRoomGuids) returns (stream  RoomPropertiesAnswer) {}
+  rpc DisconnectFromRoom (Guid) returns (DisconnectFromRoomAnswer) {}
+  rpc GetRoomList (Empty) returns(RoomListAnswer) {}
+  rpc GetPlayerState (Guid) returns (PlayerStateAnswer) {}
+  rpc ClosePlayerConnection (Guid) returns (ExitMessage) {}
+  rpc StartGame (PlayerAndRoomGuids) returns (StartGameAnswer) {}
+  rpc SpectateGame (PlayerAndRoomGuids) returns (stream SpectateGameAnswer) {}
+  rpc StopSpectateGame (PlayerAndRoomGuids) returns (StopSpectateGameAnswer) {}
+  rpc SetDirection (PlayerDirection) returns (SetDirectionAnswer) {}
+}
+
+message Empty {
+
+}
+
+enum RequestingGuidStatus
+{
+	Exists = 0;
+	NotExist = 1;
+}
+
+enum PlayerState
+{
+	Authorized = 0 ;
+    InLobby = 1;
+    InGame = 2;
+	Undefined = 3;
+}
+
+message LoginAndGuid
+{
+	string login = 1;
+	string guid = 2;
+}
+
+message PlayerStateAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	PlayerState playerState = 2;
+	Guid createdRoomGuid = 3;
+	Guid connectToRoomGuid = 4;
+}
+
+message Guid 
+{
+  string guid = 1;
+}
+
+message UserData
+{
+	string login = 1;
+	string passwordHash = 2;
+}
+
+message  AuthorizationData 
+{
+	UserData userData = 1;
+	bool clearActiveConnection = 3;
+}
+
+enum AuthorizationStatus 
+{
+	AuthorizationSuccessfull = 0;
+	WrongLoginOrPassword = 1;
+	AnotherConnectionActive = 2;
+}
+
+message AuthorizationAnswer
+{
+	Guid playerGuid = 1;
+	AuthorizationStatus status = 2;
+}
+
+enum RegistrationStatus 
+{
+	RegistrationSuccessfull = 0;
+	LoginAlreadyExist = 1;
+	BadInput = 2;
+}
+
+message RegistrationAnswer
+{
+	RegistrationStatus status = 1;
+}
+
+enum RoomStatus
+{
+	Lobby = 0;
+	GameStrated = 1;
+	GameEnded = 2;
+	Deleted = 3;
+}
+
+message RoomProperties
+{
+	string name = 1;
+	string description = 2;
+	Guid mapGuid = 3;
+	string password = 4;
+	bool hasPassword = 5;
+	uint32 playersCount = 6;
+	uint32 maxPlayerCount = 7;
+	repeated string botTypes = 8;
+	repeated string playerNames = 9;
+	string owner = 10;
+	Guid guid = 11;
+	uint32 turnsCount = 12;
+	uint32 turnDeley = 13;
+	RoomStatus status = 14;
+}
+
+message KickMessage
+{
+	PlayerAndRoomGuids ownerData = 1;
+	string targetLogin = 2;
+}
+
+enum RoomPropertiesAnswerStatus
+{
+	 PlayerGuidNotFound = 0;
+     RoomNotExist = 1;
+     ChangeRoomException = 2;
+     PlayerAlreadyConnectedToThisRoom =3;
+     OperationCanceled =4;   
+	 CantConnectToStarted =5;
+	 RoomFull = 6;
+	 WrongPassword =8;
+	 Successfull = 9;
+}
+
+message RoomPropertiesAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	RoomProperties properties = 2;
+	RoomPropertiesAnswerStatus propertiesstatus = 3;
+}
+
+message OwnerRoomConfiguration
+{
+	Guid ownerGuid = 1;
+	RoomProperties properties = 2;
+}
+
+enum RoomTableModificationStatus
+{
+	RoomTableModificationSuccessfull = 0;
+	UnplayableConfig = 1;
+	WrongMapGuid = 2;
+	WrongBotsType = 3;
+	//WrongBotsCount = 4;
+	LimitExceededForBotsForThisMap = 5;
+	LimitExceededForPlayerForThisMap = 6;
+	YouNotOwnerOfRoom = 7;	
+	MaxPlayerMoreThenSpawnerException = 8;
+	YouAlreadyGotRoom = 9;
+}
+
+message RoomTableModificationAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	RoomTableModificationStatus status = 2;
+	Guid roomGuid = 3;
+}
+
+message RoomNewProperties
+{
+	Guid roomGuid = 1;
+	RoomProperties properties = 2;
+}
+
+message PlayerAndRoomGuids
+{
+	Guid playerGuid = 1;
+	Guid roomGuid = 2;
+	string password = 3;
+}
+
+enum PlayerKickStatus
+{
+	PlayerKickSuccessfull = 0;
+	YouNotOwnerOfThisRoom = 1;	
+	RoomNotFound = 2;
+	KickPlayerNotFound = 3;
+}
+
+message PlayerKickAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	PlayerKickStatus status = 2;
+}
+
+enum DeleteRoomStatus
+{
+	DeleteRoomSuccessfull = 0;
+	CantDeleteNotYourRoom = 1;	
+	CantDeleteRoomNotFound = 2;
+}
+
+message DeleteRoomAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	DeleteRoomStatus status = 2;
+}
+
+enum DisconnectFromRoomState
+{
+	DisconnectSuccessfull = 0;
+	CantDisconnectYouNotInThisRoom = 2;	
+	CantDisconnectRoomNotFound = 3;
+}
+
+message DisconnectFromRoomAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	DisconnectFromRoomState status = 2;
+}
+
+message RoomListAnswer
+{
+	repeated RoomProperties roomProperties = 1;
+}
+
+message ExitMessage
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+}
+
+message MapInfo
+{
+	Guid guid = 1;
+	string name = 2;
+	uint32 players = 3;
+	uint32 w = 4;
+	uint32 h = 5;
+}
+
+message GetMapsAnswer
+{
+	repeated MapInfo mapInfos = 1; 
+}
+
+message GetBotsAnswer
+{
+	repeated string types = 1;
+}
+
+enum StartGameStatus
+{
+	StartSuccessfull = 0;
+	NoPlayers = 1;
+	RoomNotFoundToStartGame = 2;
+	NotYourRoom = 3;
+	GameAlreadyStarted = 4;
+}
+
+message StartGameAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	StartGameStatus gameStatus = 2;
+}
+
+enum SpectateGameStatus
+{
+	GameNotStartedNothingSpectate = 0;
+	ClosedSpectateChannel = 1;
+	OpenSpectateChannel = 2;
+	PlayerNotFoundToSpectete =  3;
+	WrongRoomToSpectate = 4;
+	PlayerAlreadySpectedThisRoom = 5;
+}
+
+enum AvatarState
+{
+	AvatarRunnig = 0;
+	AvatarWin = 1;
+	AvatarLose = 2;
+}
+
+enum BlockType 
+{
+	BlockUndefined = 0;
+	BlockWall = 1;
+    BlockEmpty = 2;
+    BlockExit = 3;
+}
+
+message Vec2Int
+{
+	int32 X = 1;
+	int32 Y = 2;
+}
+
+message BlockInfo
+{
+	Vec2Int pos = 1;
+	BlockType blockType = 2;
+}
+
+message PlayerInfo
+{
+	Vec2Int pos = 1;
+	string name = 2;
+}
+
+message SpectateData
+{
+	repeated BlockInfo blockInfos = 1;
+	repeated PlayerInfo playerInfos = 2;
+	Vec2Int pos = 3;
+	uint32 turn = 4;
+	AvatarState status = 5;
+	Vec2Int mapSize = 6;
+}
+
+message SpectateGameAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	SpectateGameStatus 	spectateGameStatus = 2;
+	SpectateData spectateData = 3;
+}
+
+enum DirectionState
+{
+	None = 0;
+	Up = 1;
+	Down = 2;
+	Left = 3;
+	Right = 4;
+}
+
+message PlayerDirection
+{
+	PlayerAndRoomGuids playerAndRoomGuids = 1;
+	DirectionState directionState = 2;
+	uint32 turn = 3;
+}
+
+enum SetDirectionState
+{
+	SuccessfullSetDir = 0;
+	PlayerNotFoundToSetDir = 1;
+	RoomNotFoundToSetDir = 2;
+	WrongTurnSet = 3;
+	GameNotStrartedToSetDir = 4;
+}
+
+message SetDirectionAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	SetDirectionState setDirectionState = 2;
+}
+
+enum StopSpectateGameState
+{
+	SuccessfullStopSpectateGame = 0;
+	CantStopSpectateRoomNotExist = 1;
+	CantStopSpectateGameNotStarted = 2;
+	CantStopSpectateSpectatingChannelNotFound = 3;
+}
+
+message StopSpectateGameAnswer
+{
+	RequestingGuidStatus requestingGuidStatus = 1;
+	StopSpectateGameState stopSpectateGameState = 2;
+}
+
